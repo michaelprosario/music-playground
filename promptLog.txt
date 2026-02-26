@@ -13,3 +13,16 @@ As a music maker, I should be able to define a pattern of music using a string
 - System design should encapsulate code into services as much as possible.
 - Implement this using Angular
 - Think about these requirements. Document a technical approach in design1.md
+===
+
+As a music maker, I should be able to define an arpeggio and a chord progression.
+- I should be able to play the arpeggio and chord progression over and over again using web midi
+- I should be able to specify a chord progressing like this: Em C D G
+    - Example2:  C C F G
+- At the present time, chords will be held for a whole measure
+- Arpeggios will be in 4/4 time
+- All music should be played on a xylophone
+- I should be able to define the Tempo
+- System design should encapsulate code into services as much as possible.
+- Try to re-use code from the rhythm pattern maker we created previously
+- Think about these requirements.  Document a technical approach in design2.md
