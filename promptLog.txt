@@ -1,0 +1,15 @@
+2/2/2025
+
+As a music maker, I should be able to define a pattern of music using a string
+- User can provide input rhythm pattern
+- Example1: *---*---*---*--- will play 4 quarter notes over 4 beats
+- Example2: **************** will play sixteenth notes over 4 beats
+- User can define the following
+    - Tempo of music
+    - Beats per measure
+    - Pitch to play
+- User should be able to play the rhytm string on repeat using web midi
+- User can start and stop play back
+- System design should encapsulate code into services as much as possible.
+- Implement this using Angular
+- Think about these requirements. Document a technical approach in design1.md
