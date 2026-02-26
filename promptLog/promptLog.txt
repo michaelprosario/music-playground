@@ -40,3 +40,21 @@ Document in design3.md
 As a music maker, as I change the arpeggio, the system updates the music with the state of the arpeggio grid
 Think about the approach.
 Document in design4.md
+
+====
+2/26
+
+As a music maker, I would like to transcribe my arpeggio played out with the chord progression to music notation
+- music notation rendering should open into a large modal
+- consider using abcjs to accomplish this effort
+- using abcjs, it would be cool to have midi playback
+- the system should only render the arpeggio over the chord progression once
+
+Think about the approach.
+Document in design5.md
+
+===
+
+- When we create the abcjs music notation, please drop all notes by one octave
+- Make all music notes black(not gray)
+ 

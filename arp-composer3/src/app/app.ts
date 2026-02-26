@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { MidiService } from './services/midi.service';
 import { ArpGridService } from './services/arp-grid.service';
 import { ArpeggioPlaybackService } from './services/arpeggio-playback.service';
@@ -6,16 +6,18 @@ import { MidiExportService } from './services/midi-export.service';
 import { ConfigService } from './services/config.service';
 import { ChordService } from './services/chord.service';
 import { ToneSynthService } from './services/tone-synth.service';
+import { AbcNotationService } from './services/abc-notation.service';
 import { ChordProgression } from './models/chord.model';
 import { ToolbarComponent } from './components/toolbar/toolbar.component';
 import { ConfigPanelComponent } from './components/config-panel/config-panel.component';
 import { ArpGridComponent } from './components/arp-grid/arp-grid.component';
 import { ChordInputComponent } from './components/chord-input/chord-input.component';
+import { NotationModalComponent } from './components/notation-modal/notation-modal.component';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [ToolbarComponent, ConfigPanelComponent, ArpGridComponent, ChordInputComponent],
+  imports: [ToolbarComponent, ConfigPanelComponent, ArpGridComponent, ChordInputComponent, NotationModalComponent],
   templateUrl: './app.html',
   styleUrl: './app.scss',
 })
@@ -27,8 +29,11 @@ export class App implements OnInit {
   private readonly _configSvc    = inject(ConfigService);
   private readonly _chordSvc     = inject(ChordService);
   private readonly _toneSvc      = inject(ToneSynthService);
+  private readonly _abcSvc       = inject(AbcNotationService);
 
-  readonly midiState = this._midiSvc.state;
+  readonly midiState     = this._midiSvc.state;
+  readonly showNotation  = signal(false);
+  readonly abcString     = signal('');
 
   private _progression: ChordProgression = { raw: '', chords: [], valid: false, error: null };
 
@@ -78,5 +83,20 @@ export class App implements OnInit {
 
   loadArp(json: string): void {
     this._gridSvc.importJson(json);
+  }
+
+  openNotation(): void {
+    if (!this._progression.valid || this._progression.chords.length === 0) {
+      alert('Please enter a valid chord progression before viewing notation.');
+      return;
+    }
+    const abc = this._abcSvc.generateAbc(
+      this._gridSvc.grid(),
+      this._progression,
+      this._configSvc.config(),
+      this._chordSvc,
+    );
+    this.abcString.set(abc);
+    this.showNotation.set(true);
   }
 }
