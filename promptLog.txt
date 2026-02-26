@@ -26,3 +26,14 @@ As a music maker, I should be able to define an arpeggio and a chord progression
 - System design should encapsulate code into services as much as possible.
 - Try to re-use code from the rhythm pattern maker we created previously
 - Think about these requirements.  Document a technical approach in design2.md
+
+====
+
+As a music maker, when I play back my arpeggio, the system should continue to loop through the chord progression
+- the system should use tone.js and a xylophone sound to play music
+
+Think about the approach.
+
+Document in design3.md
+
+====
