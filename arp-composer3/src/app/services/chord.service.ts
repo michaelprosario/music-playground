@@ -6,11 +6,25 @@ import {
 } from '../models/chord.model';
 import { ChordDegree } from '../models/arp-grid.model';
 
-const DEGREE_INDEX: Record<ChordDegree, number> = {
-  root: 0,
-  '2nd': 1,
-  third: 2,
-  fifth: 3,
+/**
+ * Maps each chord quality to the semitone offset for each grid degree.
+ *
+ * Degree meanings:
+ *  root  = tonic (0 semitones)
+ *  2nd   = major 2nd (2 semitones above root) — whole step
+ *  third = characteristic 3rd of the quality (major/minor/suspended)
+ *  fifth = characteristic 5th of the quality (perfect/dim/aug)
+ */
+const DEGREE_SEMITONES: Record<ChordQuality, Record<ChordDegree, number>> = {
+  major: { root: 0, '2nd': 2, third: 4, fifth: 7 },
+  minor: { root: 0, '2nd': 2, third: 3, fifth: 7 },
+  maj7:  { root: 0, '2nd': 2, third: 4, fifth: 7 },
+  m7:    { root: 0, '2nd': 2, third: 3, fifth: 7 },
+  '7':   { root: 0, '2nd': 2, third: 4, fifth: 7 },
+  dim:   { root: 0, '2nd': 2, third: 3, fifth: 6 },
+  aug:   { root: 0, '2nd': 2, third: 4, fifth: 8 },
+  sus2:  { root: 0, '2nd': 2, third: 2, fifth: 7 },  // suspended 2nd
+  sus4:  { root: 0, '2nd': 2, third: 5, fifth: 7 },  // suspended 4th
 };
 
 const ROOT_NAMES: string[] = [
@@ -67,12 +81,9 @@ export class ChordService {
     octaveOffset: number,
     baseOctave: number,
   ): number {
-    const intervals = this._intervals(chord.quality);
-    const degreeIdx = DEGREE_INDEX[degree];
-    const interval = intervals[degreeIdx % intervals.length];
-    const octaveWrap = Math.floor(degreeIdx / intervals.length);
+    const interval = DEGREE_SEMITONES[chord.quality][degree];
     const midiNote =
-      12 * (baseOctave + octaveOffset + octaveWrap + 1) +
+      12 * (baseOctave + octaveOffset + 1) +
       this._rootSemitone(chord.rootName) +
       interval;
     return Math.max(0, Math.min(127, midiNote));
