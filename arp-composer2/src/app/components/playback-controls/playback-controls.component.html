@@ -1,0 +1,37 @@
+<section class="playback-controls">
+  <div class="transport">
+    <button
+      class="btn play"
+      [disabled]="!canPlay"
+      (click)="play()"
+      title="Play"
+    >
+      ▶ Play
+    </button>
+    <button
+      class="btn stop"
+      [disabled]="!isPlaying()"
+      (click)="stop()"
+      title="Stop"
+    >
+      ■ Stop
+    </button>
+  </div>
+
+  @if (isPlaying()) {
+    <div class="status">
+      <div class="pulse"></div>
+      <span>
+        Playing &nbsp;·&nbsp; Beat
+        <strong>{{ state().currentBeat + 1 }}</strong>
+        of {{ config().beatsPerMeasure }}
+        &nbsp;·&nbsp; Step
+        <strong>{{ state().currentStep + 1 }}</strong>
+      </span>
+    </div>
+  }
+
+  @if (!validation().valid) {
+    <p class="cant-play-reason">Fix the pattern errors above before playing.</p>
+  }
+</section>
