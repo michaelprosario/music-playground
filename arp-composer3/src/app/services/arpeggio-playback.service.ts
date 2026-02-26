@@ -44,13 +44,13 @@ export class ArpeggioPlaybackService {
     this._progression = p;
   }
 
-  play(): void {
+  async play(): Promise<void> {
     if (this._state().isPlaying) return;
 
-    this._midi.resumeAudioContext();
+    await this._midi.resumeAudioContext();
 
     const ctx = this._midi.getAudioContext();
-    this._nextNoteTimeSec = ctx ? ctx.currentTime : 0;
+    this._nextNoteTimeSec = ctx ? ctx.currentTime : performance.now() / 1000;
     this._globalStep = 0;
 
     this._state.update(s => ({ ...s, isPlaying: true, currentStep: 0, currentChordIndex: 0 }));

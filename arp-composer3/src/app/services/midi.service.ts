@@ -190,9 +190,10 @@ export class MidiService {
     return this._audioCtx;
   }
 
-  resumeAudioContext(): void {
+  resumeAudioContext(): Promise<void> {
     if (this._audioCtx?.state === 'suspended') {
-      this._audioCtx.resume();
+      return this._audioCtx.resume();
     }
+    return Promise.resolve();
   }
 }
