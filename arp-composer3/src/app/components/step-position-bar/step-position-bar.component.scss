@@ -1,0 +1,38 @@
+.position-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 4px;
+
+  .bar-label {
+    width: 64px;
+    font-size: 11px;
+    color: #666;
+    text-align: right;
+    flex-shrink: 0;
+    padding-right: 6px;
+  }
+
+  .pos-spacer {
+    // matches width of row-controls (approx 4 buttons * ~26px + 3*2px gap = ~110px)
+    width: 114px;
+    flex-shrink: 0;
+  }
+
+  .steps {
+    display: flex;
+    gap: 1px;
+
+    .pos-cell {
+      width: 36px;
+      height: 12px;
+      background: #1a1a2e;
+      border: 1px solid #333;
+
+      &.active {
+        background: #27ae60;
+        border-color: #2ecc71;
+      }
+    }
+  }
+}

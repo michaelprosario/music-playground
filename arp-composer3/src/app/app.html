@@ -1,0 +1,31 @@
+<div class="app-shell">
+  <div class="top-bar">
+    <app-toolbar
+      (play)="play()"
+      (stop)="stop()"
+      (clearAll)="clearAll()"
+      (midiExport)="midiExport()"
+      (exportArp)="exportArp()"
+      (loadArp)="loadArp($event)"
+    />
+    <app-config-panel />
+  </div>
+
+  @if (midiState().error) {
+    <div class="midi-banner">{{ midiState().error }}</div>
+  }
+
+  <main class="main-content">
+    <h2 class="app-title">Arp Composer</h2>
+    <app-arp-grid />
+    <app-chord-input (progressionChange)="onProgressionChange($event)" />
+  </main>
+
+  <footer class="legend">
+    <span class="swatch v1"></span> V1 (soft)
+    &nbsp;
+    <span class="swatch v2"></span> V2 (loud)
+    &nbsp;
+    <span class="swatch staccato">S</span> Staccato
+  </footer>
+</div>

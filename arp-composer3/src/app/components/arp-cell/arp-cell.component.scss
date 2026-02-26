@@ -1,0 +1,38 @@
+.arp-cell {
+  width: 36px;
+  height: 36px;
+  border: 1px solid #555;
+  background: #1a1a2e;
+  color: #ccc;
+  font-size: 11px;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: background 0.1s;
+
+  &:hover {
+    border-color: #9b59b6;
+    background: #2d2d44;
+  }
+
+  &.state-v1 {
+    background: #7d3c98;
+    color: #fff;
+    border-color: #9b59b6;
+  }
+
+  &.state-v2 {
+    background: #4a235a;
+    color: #fff;
+    border-color: #6c3483;
+  }
+
+  &.state-staccato {
+    background: #1a5276;
+    color: #aed6f1;
+    border-color: #2e86c1;
+  }
+}

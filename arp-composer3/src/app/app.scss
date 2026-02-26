@@ -1,0 +1,67 @@
+.app-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #0a0a16;
+  color: #e0e0e0;
+}
+
+.top-bar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  border-bottom: 1px solid #333;
+  background: #0d0d1a;
+}
+
+.midi-banner {
+  background: rgba(231, 76, 60, 0.15);
+  border: 1px solid #c0392b;
+  color: #e74c3c;
+  padding: 6px 16px;
+  font-size: 12px;
+}
+
+.main-content {
+  flex: 1;
+  padding: 16px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 1100px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.app-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #9b59b6;
+}
+
+.legend {
+  padding: 8px 24px;
+  font-size: 12px;
+  color: #666;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border-top: 1px solid #222;
+
+  .swatch {
+    display: inline-block;
+    width: 20px;
+    height: 14px;
+    border-radius: 2px;
+    vertical-align: middle;
+    font-size: 11px;
+    line-height: 14px;
+    text-align: center;
+
+    &.v1       { background: #7d3c98; }
+    &.v2       { background: #4a235a; }
+    &.staccato { background: #1a5276; color: #aed6f1; }
+  }
+}
