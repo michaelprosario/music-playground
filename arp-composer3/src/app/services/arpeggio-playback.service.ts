@@ -1,5 +1,5 @@
 import * as Tone from 'tone';
-import { Injectable, signal, Signal, computed } from '@angular/core';
+import { Injectable, signal, Signal, computed, effect, EffectRef, Injector, inject } from '@angular/core';
 import { ConfigService } from './config.service';
 import { ArpGridService } from './arp-grid.service';
 import { ChordService } from './chord.service';
@@ -23,11 +23,14 @@ interface NoteEvent {
   velocity: number;
   stepIdx: number;
   chordIdx: number;
+  isFirstInLoop: boolean;
 }
 
 @Injectable({ providedIn: 'root' })
 export class ArpeggioPlaybackService {
   private _part: Tone.Part | null = null;
+  private _pendingRebuild = false;
+  private _effectRef: EffectRef | null = null;
 
   private readonly _state = signal<ArpeggioPlaybackState>({
     isPlaying: false,
@@ -40,6 +43,8 @@ export class ArpeggioPlaybackService {
   readonly currentStep = computed(() => this._state().currentStep);
 
   private _progression: ChordProgression = { raw: '', chords: [], valid: false, error: null };
+
+  private readonly _injector = inject(Injector);
 
   constructor(
     private readonly _config: ConfigService,
@@ -70,10 +75,22 @@ export class ArpeggioPlaybackService {
     transport.start();
 
     this._state.update(s => ({ ...s, isPlaying: true, currentStep: 0, currentChordIndex: 0 }));
+
+    // Watch for grid changes while playing and schedule a hot-swap
+    this._effectRef = effect(() => {
+      this._grid.grid();            // read to establish reactive dependency
+      if (this._state().isPlaying) {
+        this._pendingRebuild = true;
+      }
+    }, { injector: this._injector });
   }
 
   stop(): void {
     if (!this._state().isPlaying) return;
+
+    this._effectRef?.destroy();
+    this._effectRef = null;
+    this._pendingRebuild = false;
 
     Tone.getTransport().stop();
     this._part?.dispose();
@@ -112,17 +129,35 @@ export class ArpeggioPlaybackService {
         const ratio = cell.state === 'staccato' ? STACCATO_DURATION_RATIO : NORMAL_DURATION_RATIO;
 
         events.push({
-          time: step * stepDur,
+          time:          step * stepDur,
           midiNote,
-          duration: stepDur * ratio,
+          duration:      stepDur * ratio,
           velocity,
-          stepIdx: stepInMeasure,
-          chordIdx: chordIndex,
+          stepIdx:       stepInMeasure,
+          chordIdx:      chordIndex,
+          isFirstInLoop: step === 0,
         });
       }
     }
 
     const part = new Tone.Part<NoteEvent>((time, ev) => {
+      // Hot-swap at loop boundary
+      if (ev.isFirstInLoop && this._pendingRebuild) {
+        this._pendingRebuild = false;
+        const snapshot = this._grid.grid();
+        const cfg      = this._config.config();
+        const prog     = this._progression;
+
+        // Schedule swap on the main JS thread to avoid re-entrant dispose
+        Tone.getDraw().schedule(() => {
+          if (!this._state().isPlaying) return;
+          const newPart = this._buildPart(prog, snapshot, cfg);
+          this._part?.dispose();
+          this._part = newPart;
+          newPart.start(0);
+        }, time);
+      }
+
       // Tone.js polyphonic synth audio output
       this._tone.triggerNote(ev.midiNote, ev.duration, time, ev.velocity);
 
