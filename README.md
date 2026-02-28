@@ -2,6 +2,8 @@
 
 A browser-based Angular application for composing and playing back arpeggios over chord progressions. Paint notes onto a step-sequencer grid, type a chord progression, and loop the result through your browser's audio engine or a connected MIDI device.
 
+[Check out our demo for ArpComposer Playground](https://michaelprosario.github.io/music-playground/)
+
 ---
 
 ## Getting Started
@@ -102,3 +104,5 @@ Builds a binary MIDI Type-0 file from the current grid and chord progression, en
 
 ### `ConfigService`
 Holds global playback configuration (BPM, MIDI channel, base octave, note length). Exposes a reactive `config` signal consumed by other services and components.
+
+
