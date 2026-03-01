@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { ArpGrid } from '../models/arp-grid.model';
 import { ChordProgression } from '../models/chord.model';
-import { ArpeggioConfig } from '../models/arpeggio-config.model';
+import { ArpeggioConfig, NoteLength, STEPS_PER_MEASURE } from '../models/arpeggio-config.model';
 import { ChordService } from './chord.service';
 
 /** Chromatic pitch class names (ABC accidental + uppercase letter). */
@@ -18,7 +18,7 @@ const NOTE_LENGTH_TO_ABC_L: Record<string, string> = {
   sixteenth:  '1/16',
 };
 
-/** How many ABC base-units make up one step given the noteLength. */
+/** How many ABC base-units make up one step given the noteLength (grid resolution). */
 const STEP_DURATION: Record<string, number> = {
   whole:      16, // 4/4 with L:1/4 → whole measure = 4 units; but step IS the whole measure
   half:       2,
@@ -26,6 +26,26 @@ const STEP_DURATION: Record<string, number> = {
   eighth:     2,  // L:1/16 × 2 = 1/8
   sixteenth:  1,  // L:1/16 × 1 = 1/16
 };
+
+/**
+ * Returns how many ABC L-units correspond to the requested note duration,
+ * given the current grid resolution (noteLength) which defines the L base.
+ *
+ * Formula: stepUnits(noteLength) × stepsPerMeasure(noteLength) / stepsPerMeasure(noteDuration)
+ * This scales the L-unit step size to match the desired note duration.
+ */
+function calcNoteDurUnits(noteLength: NoteLength, noteDuration: NoteLength): number {
+  return STEP_DURATION[noteLength] * STEPS_PER_MEASURE[noteLength] / STEPS_PER_MEASURE[noteDuration];
+}
+
+/** Convert a numeric ABC duration (possibly fractional) to an ABC suffix string. */
+function abcDurSuffix(units: number): string {
+  if (units === 1) return '';
+  if (units >= 2 && Number.isInteger(units)) return String(units);
+  // Fractional: e.g. 0.5 → '/2'
+  const denom = Math.round(1 / units);
+  return `/${denom}`;
+}
 
 /**
  * Converts a MIDI note number to an ABC note name.
@@ -72,9 +92,12 @@ export class AbcNotationService {
     config: ArpeggioConfig,
     chordService: ChordService,
   ): string {
-    const { bpm, noteLength, baseOctave } = config;
+    const { bpm, noteLength, noteDuration, baseOctave } = config;
     const abcL = NOTE_LENGTH_TO_ABC_L[noteLength] ?? '1/16';
     const stepDur = STEP_DURATION[noteLength] ?? 1;
+    // Note display duration (independent of grid resolution)
+    const noteDurUnits = calcNoteDurUnits(noteLength, noteDuration);
+    const noteDurSuffix = abcDurSuffix(noteDurUnits);
 
     const headerLines = [
       'X:1',
@@ -107,9 +130,9 @@ export class AbcNotationService {
           const abcNote = midiToAbcNote(midi - 12);
 
           if (cell.state === 'staccato') {
-            activeNotes.push('!staccato!' + abcNote + stepDur);
+            activeNotes.push('!staccato!' + abcNote + noteDurSuffix);
           } else {
-            activeNotes.push(abcNote + stepDur);
+            activeNotes.push(abcNote + noteDurSuffix);
           }
         }
 

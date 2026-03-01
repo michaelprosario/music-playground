@@ -103,6 +103,7 @@ export class ArpeggioPlaybackService {
 
   private _buildPart(progression: ChordProgression, grid: ArpGrid, config: ArpeggioConfig): Tone.Part {
     const stepDur = this._config.getStepDurationSec();
+    const noteDur = this._config.getNoteDurationSec();
     const stepsPerMeasure = this._config.getStepsPerMeasure();
     const chordCount = progression.chords.length;
     const totalSteps = stepsPerMeasure * chordCount;
@@ -131,7 +132,7 @@ export class ArpeggioPlaybackService {
         events.push({
           time:          step * stepDur,
           midiNote,
-          duration:      stepDur * ratio,
+          duration:      noteDur * ratio,
           velocity,
           stepIdx:       stepInMeasure,
           chordIdx:      chordIndex,

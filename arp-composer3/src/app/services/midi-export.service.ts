@@ -57,6 +57,8 @@ export class MidiExportService {
     const stepsPerMeasure = STEPS_PER_MEASURE[config.noteLength];
     const microsecondsPerBeat = Math.round(60_000_000 / config.bpm);
     const ticksPerStep = (PPQN * 4) / stepsPerMeasure;
+    // Note duration is independent of grid resolution
+    const ticksPerNoteDuration = (PPQN * 4) / STEPS_PER_MEASURE[config.noteDuration];
 
     const events: MidiEvent[] = [];
 
@@ -93,7 +95,7 @@ export class MidiExportService {
           );
           const velocity = CELL_VELOCITY[cell.state];
           const ratio = cell.state === 'staccato' ? STACCATO_DURATION_RATIO : NORMAL_DURATION_RATIO;
-          const durationTicks = Math.round(ticksPerStep * ratio);
+          const durationTicks = Math.round(ticksPerNoteDuration * ratio);
 
           const ch = (config.midiChannel - 1) & 0x0f;
           events.push({ tick: stepTick,                 data: [0x90 | ch, midiNote, velocity] });

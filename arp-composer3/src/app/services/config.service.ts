@@ -27,4 +27,10 @@ export class ConfigService {
     // stepDurationSec = (60 / bpm) / (stepsPerMeasure / 4)
     return (60 / bpm) / (stepsPerMeasure / 4);
   }
+
+  /** Duration (seconds) of a single played note based on noteDuration setting. */
+  getNoteDurationSec(): number {
+    const { bpm, noteDuration } = this._config();
+    return (60 / bpm) / (STEPS_PER_MEASURE[noteDuration] / 4);
+  }
 }

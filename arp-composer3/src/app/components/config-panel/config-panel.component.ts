@@ -19,7 +19,7 @@ const NOTE_LENGTH_OPTIONS: { label: string; value: NoteLength }[] = [
   template: `
     <div class="config-panel">
       <div class="config-row">
-        <label>Note length:</label>
+        <label>Step resolution:</label>
         <select [ngModel]="configSvc.config().noteLength" (ngModelChange)="onNoteLengthChange($event)">
           @for (opt of noteLengthOptions; track opt.value) {
             <option [value]="opt.value">{{ opt.label }}</option>

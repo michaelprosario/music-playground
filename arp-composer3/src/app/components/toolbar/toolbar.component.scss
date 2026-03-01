@@ -28,4 +28,33 @@
     &.btn-stop  { border-color: #c0392b; color: #e74c3c; }
     &.btn-clear { border-color: #888; }
   }
+
+  .toolbar-control {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+
+    .control-label {
+      font-size: 13px;
+      color: #b0b0c8;
+      white-space: nowrap;
+    }
+
+    .toolbar-select {
+      padding: 5px 8px;
+      font-size: 13px;
+      border-radius: 4px;
+      border: 1px solid #555;
+      background: #2c2c3e;
+      color: #e0e0e0;
+      cursor: pointer;
+      transition: border-color 0.15s;
+
+      &:hover,
+      &:focus {
+        border-color: #9b59b6;
+        outline: none;
+      }
+    }
+  }
 }
