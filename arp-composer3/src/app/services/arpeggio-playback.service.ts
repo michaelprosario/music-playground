@@ -1,10 +1,9 @@
-import * as Tone from 'tone';
-import { Injectable, signal, Signal, computed, effect, EffectRef, Injector, inject } from '@angular/core';
+import { Injectable, NgZone, signal, Signal, computed, effect, EffectRef, Injector, inject } from '@angular/core';
 import { ConfigService } from './config.service';
 import { ArpGridService } from './arp-grid.service';
 import { ChordService } from './chord.service';
 import { MidiService } from './midi.service';
-import { ToneSynthService } from './tone-synth.service';
+import { JzzSynthService } from './jzz-synth.service';
 import { ChordProgression } from '../models/chord.model';
 import { ArpGrid } from '../models/arp-grid.model';
 import { ArpeggioConfig } from '../models/arpeggio-config.model';
@@ -17,20 +16,22 @@ export interface ArpeggioPlaybackState {
 }
 
 interface NoteEvent {
-  time: number;
   midiNote: number;
-  duration: number;
+  durationMs: number;
   velocity: number;
-  stepIdx: number;
-  chordIdx: number;
-  isFirstInLoop: boolean;
 }
+
+/** One slot per absolute step across the whole chord progression. */
+type NoteSchedule = NoteEvent[][];
 
 @Injectable({ providedIn: 'root' })
 export class ArpeggioPlaybackService {
-  private _part: Tone.Part | null = null;
+  private _intervalId: ReturnType<typeof setInterval> | null = null;
   private _pendingRebuild = false;
   private _effectRef: EffectRef | null = null;
+  private _schedule: NoteSchedule = [];
+  private _currentAbsStep = 0;
+  private _totalSteps = 0;
 
   private readonly _state = signal<ArpeggioPlaybackState>({
     isPlaying: false,
@@ -45,13 +46,14 @@ export class ArpeggioPlaybackService {
   private _progression: ChordProgression = { raw: '', chords: [], valid: false, error: null };
 
   private readonly _injector = inject(Injector);
+  private readonly _ngZone   = inject(NgZone);
 
   constructor(
     private readonly _config: ConfigService,
-    private readonly _grid: ArpGridService,
-    private readonly _chord: ChordService,
-    private readonly _midi: MidiService,
-    private readonly _tone: ToneSynthService,
+    private readonly _grid:   ArpGridService,
+    private readonly _chord:  ChordService,
+    private readonly _midi:   MidiService,
+    private readonly _jzz:    JzzSynthService,
   ) {}
 
   setProgression(p: ChordProgression): void {
@@ -62,58 +64,107 @@ export class ArpeggioPlaybackService {
     if (this._state().isPlaying) return;
     if (!this._progression.valid || this._progression.chords.length === 0) return;
 
-    await Tone.start();
+    const stepDurationMs = this._config.getStepDurationSec() * 1000;
 
-    const transport = Tone.getTransport();
-    transport.bpm.value = this._config.config().bpm;
-    transport.stop();
-    transport.position = 0;
-
-    this._part?.dispose();
-    this._part = this._buildPart(this._progression, this._grid.grid(), this._config.config());
-    this._part.start(0);
-    transport.start();
+    this._schedule        = this._buildSchedule(this._progression, this._grid.grid(), this._config.config());
+    this._totalSteps      = this._schedule.length;
+    this._currentAbsStep  = 0;
 
     this._state.update(s => ({ ...s, isPlaying: true, currentStep: 0, currentChordIndex: 0 }));
 
-    // Watch for grid changes while playing and schedule a hot-swap
+    // Watch for grid changes while playing and trigger a hot-swap on the next loop
     this._effectRef = effect(() => {
-      this._grid.grid();            // read to establish reactive dependency
+      this._grid.grid();   // subscribe to reactive dependency
       if (this._state().isPlaying) {
         this._pendingRebuild = true;
       }
     }, { injector: this._injector });
+
+    // Run the interval outside Angular's zone to avoid unnecessary CD cycles;
+    // state updates inside _tick() are brought back into the zone explicitly.
+    this._intervalId = this._ngZone.runOutsideAngular(() =>
+      setInterval(() => this._tick(), stepDurationMs),
+    );
   }
 
   stop(): void {
     if (!this._state().isPlaying) return;
 
     this._effectRef?.destroy();
-    this._effectRef = null;
+    this._effectRef   = null;
     this._pendingRebuild = false;
 
-    Tone.getTransport().stop();
-    this._part?.dispose();
-    this._part = null;
-    this._tone.releaseAll();
-    this._midi.allNotesOff(this._config.config().midiChannel);
+    if (this._intervalId !== null) {
+      clearInterval(this._intervalId);
+      this._intervalId = null;
+    }
 
-    this._state.set({ isPlaying: false, currentStep: 0, currentChordIndex: 0 });
+    const ch = this._config.config().midiChannel;
+    this._jzz.allNotesOff(ch);
+    this._midi.allNotesOff(ch);
+
+    this._ngZone.run(() => {
+      this._state.set({ isPlaying: false, currentStep: 0, currentChordIndex: 0 });
+    });
   }
 
-  private _buildPart(progression: ChordProgression, grid: ArpGrid, config: ArpeggioConfig): Tone.Part {
-    const stepDur = this._config.getStepDurationSec();
-    const stepsPerMeasure = this._config.getStepsPerMeasure();
-    const chordCount = progression.chords.length;
-    const totalSteps = stepsPerMeasure * chordCount;
-    const usingRealMidi = !this._midi.state().usingFallback;
+  // ---------------------------------------------------------------------------
+  // Private helpers
+  // ---------------------------------------------------------------------------
 
-    const events: NoteEvent[] = [];
+  private _tick(): void {
+    const absStep = this._currentAbsStep;
+
+    // Hot-swap the schedule at the start of each loop (step 0)
+    if (absStep === 0 && this._pendingRebuild) {
+      this._pendingRebuild = false;
+      this._schedule   = this._buildSchedule(this._progression, this._grid.grid(), this._config.config());
+      this._totalSteps = this._schedule.length;
+    }
+
+    if (this._totalSteps === 0) return;
+
+    const stepsPerMeasure = this._config.getStepsPerMeasure();
+    const stepInMeasure   = absStep % stepsPerMeasure;
+    const chordIndex      = Math.floor(absStep / stepsPerMeasure);
+    const config          = this._config.config();
+    const usingRealMidi   = !this._midi.state().usingFallback;
+
+    const events = this._schedule[absStep] ?? [];
+    for (const ev of events) {
+      // JZZ + jzz-synth-tiny handles note-on → wait → note-off internally
+      this._jzz.note(config.midiChannel, ev.midiNote, ev.velocity, ev.durationMs);
+
+      // Forward to hardware MIDI device when one is connected
+      if (usingRealMidi) {
+        this._midi.noteOn(config.midiChannel, ev.midiNote, ev.velocity);
+        this._midi.noteOff(config.midiChannel, ev.midiNote);
+      }
+    }
+
+    // Update the visual playhead — run inside Angular zone so signals propagate
+    this._ngZone.run(() => {
+      this._state.update(s => ({ ...s, currentStep: stepInMeasure, currentChordIndex: chordIndex }));
+    });
+
+    this._currentAbsStep = (absStep + 1) % this._totalSteps;
+  }
+
+  private _buildSchedule(
+    progression: ChordProgression,
+    grid: ArpGrid,
+    config: ArpeggioConfig,
+  ): NoteSchedule {
+    const stepDurationMs  = this._config.getStepDurationSec() * 1000;
+    const stepsPerMeasure = this._config.getStepsPerMeasure();
+    const totalSteps      = stepsPerMeasure * progression.chords.length;
+
+    const schedule: NoteSchedule = Array.from({ length: totalSteps }, () => []);
 
     for (let step = 0; step < totalSteps; step++) {
       const stepInMeasure = step % stepsPerMeasure;
-      const chordIndex = Math.floor(step / stepsPerMeasure);
-      const chord = progression.chords[chordIndex];
+      const chordIndex    = Math.floor(step / stepsPerMeasure);
+      const chord         = progression.chords[chordIndex];
 
       for (const row of grid.rows) {
         const cell = row.cells[stepInMeasure];
@@ -125,57 +176,13 @@ export class ArpeggioPlaybackService {
           row.octaveOffset,
           config.baseOctave,
         );
-        const velocity = CELL_VELOCITY[cell.state];
-        const ratio = cell.state === 'staccato' ? STACCATO_DURATION_RATIO : NORMAL_DURATION_RATIO;
+        const velocity  = CELL_VELOCITY[cell.state];
+        const ratio     = cell.state === 'staccato' ? STACCATO_DURATION_RATIO : NORMAL_DURATION_RATIO;
 
-        events.push({
-          time:          step * stepDur,
-          midiNote,
-          duration:      stepDur * ratio,
-          velocity,
-          stepIdx:       stepInMeasure,
-          chordIdx:      chordIndex,
-          isFirstInLoop: step === 0,
-        });
+        schedule[step].push({ midiNote, durationMs: stepDurationMs * ratio, velocity });
       }
     }
 
-    const part = new Tone.Part<NoteEvent>((time, ev) => {
-      // Hot-swap at loop boundary
-      if (ev.isFirstInLoop && this._pendingRebuild) {
-        this._pendingRebuild = false;
-        const snapshot = this._grid.grid();
-        const cfg      = this._config.config();
-        const prog     = this._progression;
-
-        // Schedule swap on the main JS thread to avoid re-entrant dispose
-        Tone.getDraw().schedule(() => {
-          if (!this._state().isPlaying) return;
-          const newPart = this._buildPart(prog, snapshot, cfg);
-          this._part?.dispose();
-          this._part = newPart;
-          newPart.start(0);
-        }, time);
-      }
-
-      // Tone.js polyphonic synth audio output
-      this._tone.triggerNote(ev.midiNote, ev.duration, time, ev.velocity);
-
-      // Real MIDI device output (skip fallback path to avoid double audio)
-      if (usingRealMidi) {
-        const ch = config.midiChannel;
-        this._midi.noteOn(ch, ev.midiNote, ev.velocity);
-        this._midi.noteOff(ch, ev.midiNote);
-      }
-
-      // Update Angular playhead via Draw scheduler
-      Tone.getDraw().schedule(() => {
-        this._state.update(s => ({ ...s, currentStep: ev.stepIdx, currentChordIndex: ev.chordIdx }));
-      }, time);
-    }, events);
-
-    part.loop = true;
-    part.loopEnd = totalSteps * stepDur;
-    return part;
+    return schedule;
   }
 }

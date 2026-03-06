@@ -58,3 +58,16 @@ Document in design5.md
 - When we create the abcjs music notation, please drop all notes by one octave
 - Make all music notes black(not gray)
  
+ ====
+
+ 3/5
+
+- the system currently outputs midi messages to tone.js
+- replace the tone.js approach with using jzz js
+- consider docs in jzz.md
+- play an instrument using jzz-synth-tiny
+- think about the approach for this.
+- document in design6.md
+
+====
+As a music maker, I should have a drop down enabling me to select the instrument played back

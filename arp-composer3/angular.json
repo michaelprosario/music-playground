@@ -32,6 +32,11 @@
             ],
             "styles": [
               "src/styles.scss"
+            ],
+            "allowedCommonJsDependencies": [
+              "jzz",
+              "jzz-synth-tiny",
+              "abcjs"
             ]
           },
           "configurations": {

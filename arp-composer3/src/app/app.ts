@@ -5,7 +5,7 @@ import { ArpeggioPlaybackService } from './services/arpeggio-playback.service';
 import { MidiExportService } from './services/midi-export.service';
 import { ConfigService } from './services/config.service';
 import { ChordService } from './services/chord.service';
-import { ToneSynthService } from './services/tone-synth.service';
+import { JzzSynthService } from './services/jzz-synth.service';
 import { AbcNotationService } from './services/abc-notation.service';
 import { ChordProgression } from './models/chord.model';
 import { ToolbarComponent } from './components/toolbar/toolbar.component';
@@ -28,7 +28,7 @@ export class App implements OnInit {
   private readonly _exportSvc    = inject(MidiExportService);
   private readonly _configSvc    = inject(ConfigService);
   private readonly _chordSvc     = inject(ChordService);
-  private readonly _toneSvc      = inject(ToneSynthService);
+  private readonly _jzzSvc       = inject(JzzSynthService);
   private readonly _abcSvc       = inject(AbcNotationService);
 
   readonly midiState     = this._midiSvc.state;
@@ -39,7 +39,7 @@ export class App implements OnInit {
 
   async ngOnInit(): Promise<void> {
     await this._midiSvc.init();
-    this._toneSvc.init();
+    await this._jzzSvc.init();
   }
 
   onProgressionChange(p: ChordProgression): void {
