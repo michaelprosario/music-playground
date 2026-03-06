@@ -29,7 +29,7 @@ export class ChordInputComponent implements OnInit {
 
   progressionChange = output<ChordProgression>();
 
-  raw = 'Em C D G';
+  raw = 'G D Em C';
   readonly progression = signal<ChordProgression>({ raw: '', chords: [], valid: false, error: null });
 
   ngOnInit(): void {

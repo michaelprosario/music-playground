@@ -14,7 +14,7 @@ export class JzzSynthService {
   private readonly _ready = signal(false);
   readonly isReady = this._ready.asReadonly();
 
-  async init(): Promise<void> {
+  async init(gmProgram = 13): Promise<void> {
     try {
       // JZZ.synth.Tiny is added by the jzz-synth-tiny plugin — access via index
       // to satisfy noPropertyAccessFromIndexSignature compiler option.
@@ -25,12 +25,17 @@ export class JzzSynthService {
         return;
       }
       this._port = await tinyFn();
-      // GM program 13 = Xylophone, MIDI channel 0 (0-based)
-      await this._port.program(0, 13);
+      await this._port.program(0, gmProgram);
       this._ready.set(true);
     } catch (err) {
       console.error('JZZ Tiny Synth init failed', err);
     }
+  }
+
+  /** Send a GM program change on the given 1-based channel. */
+  setProgram(channel: number, gmProgram: number): void {
+    if (!this._port) return;
+    this._port.program(channel - 1, gmProgram);
   }
 
   /**

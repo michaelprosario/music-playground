@@ -39,7 +39,7 @@ export class App implements OnInit {
 
   async ngOnInit(): Promise<void> {
     await this._midiSvc.init();
-    await this._jzzSvc.init();
+    await this._jzzSvc.init(this._configSvc.config().gmProgram);
   }
 
   onProgressionChange(p: ChordProgression): void {

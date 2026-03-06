@@ -5,6 +5,8 @@ export interface ArpeggioConfig {
   noteLength: NoteLength;
   midiChannel: number;
   baseOctave: number;
+  /** 0-based General MIDI program number (0 = Acoustic Grand Piano, 13 = Xylophone, …) */
+  gmProgram: number;
 }
 
 export const DEFAULT_ARPEGGIO_CONFIG: ArpeggioConfig = {
@@ -12,6 +14,7 @@ export const DEFAULT_ARPEGGIO_CONFIG: ArpeggioConfig = {
   noteLength: 'sixteenth',
   midiChannel: 1,
   baseOctave: 4,
+  gmProgram: 13, // Xylophone
 };
 
 export const STEPS_PER_MEASURE: Record<NoteLength, number> = {
